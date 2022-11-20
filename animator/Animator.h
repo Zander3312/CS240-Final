@@ -21,7 +21,7 @@
 //*
 //* Usage:
 //*   - construct an instance of Animator, passing the number of sections
-//*     prior to the intersection (e.g., 8 will result in a lane of 
+//*     prior to the intersection (e.g., 8 will result in a lane of
 //*     (8*2) + 2 = 18 sections)
 //*   - construct four std::vector<VehicleBase*>, one for each direction
 //*     of westbound, easbound, southbound, and northbound
