@@ -8,6 +8,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <random>
 #include "Animator.h"
 #include "VehicleBase.h"
 using namespace std;
@@ -16,7 +17,7 @@ using namespace std;
 //Declare methods
 void moveVehicles(vector<VehicleBase*>& vehicles);
 //void turnRight(vector<VehicleBase*>& vehicles);
-//void spawnCars();
+void spawnVehicle(vector<VehicleBase*>& vehicles, Direction direction);
 
 int main(int argc, char* argv[]) {
     //Check if number of arguments is correct; if not, print proper usage then exit program
@@ -75,6 +76,12 @@ int main(int argc, char* argv[]) {
 
     inFile.close(); //Done with input file
 
+    //Initialize values for RNG
+    mt19937 randomNumberGenerator; //Mersenne twister; handles RNG
+    uniform_real_distribution<double> rand_double(0,1); //rand_double will only generate values between 0 and 1
+    randomNumberGenerator.seed(stoi(argv[2])); //Set RNG seed to the seed given in the command line
+    double randNum = rand_double(randomNumberGenerator); //Random number used to generate car spawns
+
     Animator::MAX_VEHICLE_COUNT = 999;  // vehicles will be displayed with three digits
 
     Animator anim(sectionsBeforeIntersection);
@@ -107,7 +114,7 @@ int main(int argc, char* argv[]) {
     anim.setLightNorthSouth(LightColor::green);
     anim.setLightEastWest(LightColor::green);
 
-    eastbound[0] = &vb1; //Initialize first half of car for testing movement east
+    //eastbound[0] = &vb1; //Initialize first half of car for testing movement east
 
     //Main loop for moving and drawing the vehicles
     for (int clock = 0; clock < maxSimulatedTime; clock++) {
@@ -129,6 +136,23 @@ int main(int argc, char* argv[]) {
         moveVehicles(westbound);
         moveVehicles(southbound);
         moveVehicles(eastbound);
+
+        double randNum = rand_double(randomNumberGenerator);
+
+        //Run RNG to see if a vehicle will be spawned; if so, spawn the vehicle
+        randNum = rand_double(randomNumberGenerator);
+        if (randNum < probNewVehicleNorth)
+            spawnVehicle(northbound, Direction::north);
+        randNum = rand_double(randomNumberGenerator);
+        if (randNum < probNewVehicleWest)
+            spawnVehicle(westbound, Direction::west);
+        randNum = rand_double(randomNumberGenerator);
+        if (randNum < probNewVehicleSouth)
+            spawnVehicle(southbound, Direction::south);
+        randNum = rand_double(randomNumberGenerator);
+        if (randNum < probNewVehicleEast)
+            spawnVehicle(eastbound, Direction::east);
+        
     }
 }
 
@@ -137,13 +161,20 @@ int main(int argc, char* argv[]) {
 void moveVehicles(vector<VehicleBase*>& vehicles) {
     for (int i = 0; i < vehicles.size(); i++) {
         if (vehicles[vehicles.size()-1-i] != nullptr) { //if current space on grid is not a null pointer (iterates backwards), makes it so if the currently checked tile is empty no operations are done
-            if (vehicles.size()-1-i == 0 && vehicles[vehicles.size()-1-i] != vehicles[vehicles.size()-i]) { //if current space is the first space and space ahead is not the same as current space (later include properties to account for other vehicles types than car)
+            if (vehicles.size()-1-i == 0 && vehicles[vehicles.size()-1-i] != vehicles[vehicles.size()-i]) { //if current space is the first space and space ahead is not the same as current space (later include properties to account for other vehicle types than car)
                 vehicles[vehicles.size()-i] = vehicles[vehicles.size()-1-i]; //Make current vehicle segment also occupy the space in front of it
                 continue; //Do not delete previous segment location; previous segment location becomes next segment for a newly generated vehicle
             }
-            vehicles[vehicles.size()-i] = vehicles[vehicles.size()-1-i]; //Make current vehicle segment also occupy the space in front of it
-            if (vehicles[vehicles.size()-i-1] != vehicles[vehicles.size()-i-2]) { //If this is the last segment in a car (change to account for other sizes later)
-                vehicles[vehicles.size()-i-1] = nullptr; //Delete previous segment location
+            if (vehicles.size()-1-i == vehicles.size()-1) { //If the current space is the last space
+                if (vehicles[vehicles.size()-2-i] == nullptr) { //If this is the last segment of a car
+                    delete vehicles[vehicles.size()-1]; //Deallocate memory allocated to the vehicle
+                }
+                vehicles[vehicles.size()-i-1] = nullptr; //Delete the segment; it does not get placed in the next segment because there is no next segment, the vehicle segment exits the intersection
+            } else {
+                vehicles[vehicles.size()-i] = vehicles[vehicles.size()-1-i]; //Make current vehicle segment also occupy the space in front of it
+                if (vehicles[vehicles.size()-i-1] != vehicles[vehicles.size()-i-2]) { //If this is the last segment in a car (change to account for other sizes later)
+                    vehicles[vehicles.size()-i-1] = nullptr; //Delete previous segment location
+                }
             }
         }
     }
@@ -155,3 +186,13 @@ void moveVehicles(vector<VehicleBase*>& vehicles) {
 // void turnRight(vector<VehicleBase*>& vehicles) {
 
 // }
+
+//Method spawns a vehicle in the given space. Called after RNG determines that a vehicle going a given direction should be spawned in the main for loop. First parameter
+//contains the vector corresponding to the direction the spawning vehicle will travel and the vector the spawning vehicle will be placed at the start of.
+void spawnVehicle(vector<VehicleBase*>& vehicles, Direction direction) {
+    if (vehicles[0] != nullptr) { //If the first space is already occupied
+        return; //Don't do anything; you can't spawn in a vehicle if a vehicle is already occupying the space
+    }
+    VehicleBase* newVehicle = new VehicleBase(VehicleType::car, direction);
+    vehicles[0] = newVehicle;
+}
