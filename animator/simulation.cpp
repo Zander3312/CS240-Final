@@ -95,7 +95,7 @@ int main(int argc, char* argv[]) {
     char dummy; //Used to wait for input
 
     // initialize test vehicles; should not be in final program and vehicles will spawn in randomly
-    VehicleBase vb1(VehicleType::car, Direction::south);
+    // VehicleBase vb1(VehicleType::car, Direction::south);
     // VehicleBase vb2(VehicleType::suv, Direction::east);
     // VehicleBase vb3(VehicleType::truck, Direction::east);
     // VehicleBase vb4(VehicleType::car, Direction::west);
@@ -137,6 +137,7 @@ int main(int argc, char* argv[]) {
         moveVehicles(southbound);
         moveVehicles(eastbound);
 
+        //Initialize double used for caluclating car spawns
         double randNum = rand_double(randomNumberGenerator);
 
         //Run RNG to see if a vehicle will be spawned; if so, spawn the vehicle
@@ -189,10 +190,14 @@ void moveVehicles(vector<VehicleBase*>& vehicles) {
 
 //Method spawns a vehicle in the given space. Called after RNG determines that a vehicle going a given direction should be spawned in the main for loop. First parameter
 //contains the vector corresponding to the direction the spawning vehicle will travel and the vector the spawning vehicle will be placed at the start of.
+//Second parameter determines which direction the spawned vehicle will be traveling in.
 void spawnVehicle(vector<VehicleBase*>& vehicles, Direction direction) {
     if (vehicles[0] != nullptr) { //If the first space is already occupied
         return; //Don't do anything; you can't spawn in a vehicle if a vehicle is already occupying the space
     }
-    VehicleBase* newVehicle = new VehicleBase(VehicleType::car, direction);
-    vehicles[0] = newVehicle;
+
+    //Place things that will determine the qualities of the vehicle here (what type of vehicle, will it turn right, etc.)
+
+    VehicleBase* newVehicle = new VehicleBase(VehicleType::car, direction); //Dynamically allocate new vehicle; dynamic allocation is needed because otherwise the vehicle would stop existing once the function call ended
+    vehicles[0] = newVehicle; //Place newly generated vehicle in the first space of the lane
 }
