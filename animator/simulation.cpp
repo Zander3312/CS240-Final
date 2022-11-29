@@ -3,6 +3,7 @@
 // Main method of traffic simulator. Handles movement of cars, right turns, making sure cars do not collide, reading input file, and RNG.
 // Run this program using "./simulation <input file> <initial RNG seed>"
 // First segment of cars should be spawned in using random number generation then this program will spawn the rest of the segments progressively as needed.
+// 
 // NOTE: Currently only for use with cars. When vehicleBase.cpp is finalized, other types with be supported.
 
 #include <iostream>
@@ -16,7 +17,7 @@ using namespace std;
 
 //Declare methods
 void moveVehicles(vector<VehicleBase*>& vehicles);
-//void turnRight(vector<VehicleBase*>& vehicles);
+void turnRight(vector<VehicleBase*>& directionFrom, vector<VehicleBase*>& directionTo, int sectionsBeforeIntersection);
 void spawnVehicle(vector<VehicleBase*>& vehicles, Direction direction);
 
 int main(int argc, char* argv[]) {
@@ -35,7 +36,7 @@ int main(int argc, char* argv[]) {
     }
 
     //Assign values from input file to corresponding variable
-    string currentWord; //Declare string that will hold the name of the value from the input file; not actually used, only for advancing in the document
+    string currentWord; //Declare string that will hold the name of the value from the input file, used to check if input file is correct
     string currentValue; //Declare string that will hold the value associated with that string
     inFile >> currentWord >> currentValue; //Get values from line of input file
     int maxSimulatedTime = stoi(currentValue); //Assign the value to a variable corresponding with the given value for later use
@@ -94,42 +95,12 @@ int main(int argc, char* argv[]) {
 
     char dummy; //Used to wait for input
 
-    // initialize test vehicles; should not be in final program and vehicles will spawn in randomly
-    // VehicleBase vb1(VehicleType::car, Direction::south);
-    // VehicleBase vb2(VehicleType::suv, Direction::east);
-    // VehicleBase vb3(VehicleType::truck, Direction::east);
-    // VehicleBase vb4(VehicleType::car, Direction::west);
-    // VehicleBase vb5(VehicleType::suv, Direction::west);
-    // VehicleBase vb6(VehicleType::truck, Direction::west);
-
-    // VehicleBase vb7(VehicleType::car, Direction::south);
-    // VehicleBase vb8(VehicleType::suv, Direction::south);
-    // VehicleBase vb9(VehicleType::truck, Direction::south);
-    // VehicleBase vb10(VehicleType::car, Direction::north);
-    // VehicleBase vb11(VehicleType::suv, Direction::north);
-    // VehicleBase vb12(VehicleType::truck, Direction::north);
-    // VehicleBase vb13(vb12);  // just test the copy constructor -- should be #011
-
     // Initialize stoplight colors - delete when lights are actually implemented
     anim.setLightNorthSouth(LightColor::green);
     anim.setLightEastWest(LightColor::green);
 
-    //eastbound[0] = &vb1; //Initialize first half of car for testing movement east
-
     //Main loop for moving and drawing the vehicles
     for (int clock = 0; clock < maxSimulatedTime; clock++) {
-
-        //Set vehicles moving in all directions
-        anim.setVehiclesNorthbound(northbound);
-        anim.setVehiclesWestbound(westbound);
-        anim.setVehiclesSouthbound(southbound);
-        anim.setVehiclesEastbound(eastbound);
-
-        //Draw the cars into the intersection as given
-        anim.draw(clock);
-
-        //Wait for input to progress in the loop
-        std::cin.get(dummy);
 
         //Move vehicles in all directions
         moveVehicles(northbound);
@@ -137,8 +108,10 @@ int main(int argc, char* argv[]) {
         moveVehicles(southbound);
         moveVehicles(eastbound);
 
-        //Initialize double used for caluclating car spawns
-        double randNum = rand_double(randomNumberGenerator);
+        //Check for and execute right turns
+        //if (eastbound[sectionsBeforeIntersection+1] != nullptr) { //If there is a car segment in the first part of an intersection (later check if car is turning right)
+        //    turnRight(eastbound, southbound, sectionsBeforeIntersection); //Change car from first lane to new lane after having turned right
+        //}
 
         //Run RNG to see if a vehicle will be spawned; if so, spawn the vehicle
         randNum = rand_double(randomNumberGenerator);
@@ -153,6 +126,18 @@ int main(int argc, char* argv[]) {
         randNum = rand_double(randomNumberGenerator);
         if (randNum < probNewVehicleEast)
             spawnVehicle(eastbound, Direction::east);
+
+        //Set vehicles moving in all directions
+        anim.setVehiclesNorthbound(northbound);
+        anim.setVehiclesWestbound(westbound);
+        anim.setVehiclesSouthbound(southbound);
+        anim.setVehiclesEastbound(eastbound);
+
+        //Draw the cars into the intersection as given
+        anim.draw(clock);
+
+        //Wait for input to progress in the loop
+        std::cin.get(dummy);
         
     }
 }
@@ -160,18 +145,21 @@ int main(int argc, char* argv[]) {
 // Method moves vehicles in a given direction one unit at a time. Called every time input is given. Vehicles are moved after the animator is drawn for that frame
 //(probably will change to before animator is drawn later but this is better for testing at the moment).
 void moveVehicles(vector<VehicleBase*>& vehicles) {
-    for (int i = 0; i < vehicles.size(); i++) {
-        if (vehicles[vehicles.size()-1-i] != nullptr) { //if current space on grid is not a null pointer (iterates backwards), makes it so if the currently checked tile is empty no operations are done
-            if (vehicles.size()-1-i == 0 && vehicles[vehicles.size()-1-i] != vehicles[vehicles.size()-i]) { //if current space is the first space and space ahead is not the same as current space (later include properties to account for other vehicle types than car)
+    for (size_t i = 0; i < vehicles.size(); i++) {
+        if (vehicles[vehicles.size()-1-i] != nullptr) { //If current space on grid is not a null pointer (iterates backwards), makes it so if the currently checked tile is empty no operations are done
+            if (vehicles.size()-1-i == 0 && vehicles[vehicles.size()-1-i] != vehicles[vehicles.size()-i]) { //If current space is the first space and space ahead is not the same as current space (later include properties to account for other vehicle types than car)
                 vehicles[vehicles.size()-i] = vehicles[vehicles.size()-1-i]; //Make current vehicle segment also occupy the space in front of it
                 continue; //Do not delete previous segment location; previous segment location becomes next segment for a newly generated vehicle
             }
             if (vehicles.size()-1-i == vehicles.size()-1) { //If the current space is the last space
-                if (vehicles[vehicles.size()-2-i] == nullptr) { //If this is the last segment of a car
-                    delete vehicles[vehicles.size()-1]; //Deallocate memory allocated to the vehicle
+                if (vehicles[vehicles.size()-2-i] != vehicles[vehicles.size()-1]) { //If this is the last segment of a car
+                    delete vehicles[vehicles.size()-1]; //Deallocate memory allocated to the vehicle (Problem here, fix later)
                 }
                 vehicles[vehicles.size()-i-1] = nullptr; //Delete the segment; it does not get placed in the next segment because there is no next segment, the vehicle segment exits the intersection
-            } else {
+            } else if (vehicles.size()-1-i == 0) { //If current space is the first space; we know from earlier this is the last segment of the vehicle (ACCOUNT FOR OTHER VEHICLE TYPES LATER!)
+                vehicles[vehicles.size()-i] = vehicles[vehicles.size()-1-i]; //Make current vehicle segment also occupy the space in front of it
+                vehicles[vehicles.size()-i-1] = nullptr; //Delete previous segment location
+            } else { //If current space is anywhere in between the first and last spaces
                 vehicles[vehicles.size()-i] = vehicles[vehicles.size()-1-i]; //Make current vehicle segment also occupy the space in front of it
                 if (vehicles[vehicles.size()-i-1] != vehicles[vehicles.size()-i-2]) { //If this is the last segment in a car (change to account for other sizes later)
                     vehicles[vehicles.size()-i-1] = nullptr; //Delete previous segment location
@@ -183,10 +171,12 @@ void moveVehicles(vector<VehicleBase*>& vehicles) {
 
 //Method changes the array a segment of a vehicle is in when it moves forward to simulate it having taken a right turn. Should be called once per segment to change
 //each one individually as they go through the turn. Because the stoplights will only allow west/east or north/south to move through the intersection at the same time,
-//there is no need to account for if a car is already on the space the turning car is attempting to move into.
-// void turnRight(vector<VehicleBase*>& vehicles) {
-
-// }
+//there is no need to account for if a car is already on the space the turning car is attempting to move into. First parameter is the car's original vector, second
+//parameter is the car's new vector it is turning into, and third parameter is the number of sections before the intersection.
+void turnRight(vector<VehicleBase*>& directionFrom, vector<VehicleBase*>& directionTo, int sectionsBeforeIntersection) {
+    directionTo[sectionsBeforeIntersection+2] = directionFrom[sectionsBeforeIntersection+1]; //Move segment from current lane to new lane
+    directionFrom[sectionsBeforeIntersection+1] = nullptr; //Remove segment from old lane
+}
 
 //Method spawns a vehicle in the given space. Called after RNG determines that a vehicle going a given direction should be spawned in the main for loop. First parameter
 //contains the vector corresponding to the direction the spawning vehicle will travel and the vector the spawning vehicle will be placed at the start of.
@@ -198,6 +188,6 @@ void spawnVehicle(vector<VehicleBase*>& vehicles, Direction direction) {
 
     //Place things that will determine the qualities of the vehicle here (what type of vehicle, will it turn right, etc.)
 
-    VehicleBase* newVehicle = new VehicleBase(VehicleType::car, direction); //Dynamically allocate new vehicle; dynamic allocation is needed because otherwise the vehicle would stop existing once the function call ended
-    vehicles[0] = newVehicle; //Place newly generated vehicle in the first space of the lane
+    //VehicleBase* newVehicle = new VehicleBase(VehicleType::car, direction); //Problem here, fix later
+    vehicles[0] = new VehicleBase(VehicleType::car, direction); //Place newly generated vehicle in the first space of the lane
 }

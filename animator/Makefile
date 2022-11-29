@@ -7,7 +7,7 @@ OBJS = Animator.o VehicleBase.o simulation.o
 
 #### use next two lines for mathcs* machines:
 CC = g++
-CCFLAGS = -std=c++17
+CCFLAGS = -std=c++17 -g
 
 all: $(EXECS)
 
