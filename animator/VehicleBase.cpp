@@ -41,29 +41,29 @@ VehicleBase::VehicleBase(const VehicleBase& other)
 
 VehicleBase::~VehicleBase() {}
 
-void VehicleBase::moveForward(vector<VehicleBase*> &road, StopLight &light){
-    int stopLightPoint = road.size() / 2 - 2;
-    LightColor currentLight = light.getColor();
-    if (currentLight == LightColor::red){ //do nothing
-        return;
-    }
-    if (road[head + 1] == nullptr){                                                  //additional if?
-        if (currentLight == LightColor::green){
-            road[head + 1] = this;
-            head += 1;
-            road[tail] = nullptr;
-            tail += 1;
-        }
-        if (currentLight == LightColor::yellow){
-            if ((head != stopLightPoint) || (light.getTimeLeft() > length)){            //or >=?
-                road[head + 1] = this;
-                head += 1;
-                road[tail] = nullptr;
-                tail += 1;
-            }
-        }
-    }
-}
+// void VehicleBase::moveForward(vector<VehicleBase*> &road, StopLight &light){
+//     int stopLightPoint = road.size() / 2 - 2;
+//     LightColor currentLight = light.getColor();
+//     if (currentLight == LightColor::red){ //do nothing
+//         return;
+//     }
+//     if (road[head + 1] == nullptr){                                                  //additional if?
+//         if (currentLight == LightColor::green){
+//             road[head + 1] = this;
+//             head += 1;
+//             road[tail] = nullptr;
+//             tail += 1;
+//         }
+//         if (currentLight == LightColor::yellow){
+//             if ((head != stopLightPoint) || (light.getTimeLeft() > length)){            //or >=?
+//                 road[head + 1] = this;
+//                 head += 1;
+//                 road[tail] = nullptr;
+//                 tail += 1;
+//             }
+//         }
+//     }
+// }
 
 /*
 void VehicleBase::moveRight(vector<VehicleBase*> &road1,

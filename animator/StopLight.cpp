@@ -1,3 +1,6 @@
+#ifndef __STOP_LIGHT_CPP__
+#define __STOP_LIGHT_CPP__
+
 #include "StopLight.h"
 #include <string>
 
@@ -56,3 +59,5 @@ LightColor StopLight::getColor(){
 int StopLight::getTimeLeft(){
     return timeLeft;
 }
+
+#endif

@@ -12,13 +12,12 @@
 #include <random>
 #include <map>
 #include "Animator.h"
-#include "StopLight.h"
 #include "VehicleBase.h"
 using namespace std;
 
 
 //Declare methods
-void moveVehicles(vector<VehicleBase*>& vehicles);
+void moveVehicles(vector<VehicleBase*>& vehicles, StopLight& light, map<string, string> inputMap);
 void turnRight(vector<VehicleBase*>& directionFrom, vector<VehicleBase*>& directionTo, int sectionsBeforeIntersection);
 void spawnVehicle(vector<VehicleBase*>& vehicles, Direction direction, map<string, string> inputMap, double typeRandNum, double turnRandNum);
 
@@ -69,19 +68,21 @@ int main(int argc, char* argv[]) {
     anim.setLightNorthSouth(LightColor::green);
     anim.setLightEastWest(LightColor::green);
 
+    StopLight testLight; //Create StopLight object for testing
+
     //Main loop for moving and drawing the vehicles
     for (int clock = 0; clock < stoi(inputMap["maximum_simulated_time:"]); clock++) {
 
         //Move vehicles in all directions
-        moveVehicles(northbound);
-        moveVehicles(westbound);
-        moveVehicles(southbound);
-        moveVehicles(eastbound);
+        moveVehicles(northbound, testLight, inputMap);
+        moveVehicles(westbound, testLight, inputMap);
+        moveVehicles(southbound, testLight, inputMap);
+        moveVehicles(eastbound, testLight, inputMap);
 
         //Check for and execute right turns
-        if (eastbound[stoi(inputMap["number_of_sections_before_intersection:"])+1] != nullptr) { //If there is a car segment in the first part of an intersection (later check if car is turning right)
-           turnRight(eastbound, southbound, stoi(inputMap["number_of_sections_before_intersection:"])); //Change car from first lane to new lane after having turned right
-        }
+        // if (eastbound[stoi(inputMap["number_of_sections_before_intersection:"])+1] != nullptr) { //If there is a car segment in the first part of an intersection (later check if car is turning right)
+        //    turnRight(eastbound, southbound, stoi(inputMap["number_of_sections_before_intersection:"])); //Change car from first lane to new lane after having turned right
+        // }
 
         //Run RNG to see if a vehicle will be spawned; if so, spawn the vehicle
         randNum = rand_double(randomNumberGenerator);
@@ -114,29 +115,83 @@ int main(int argc, char* argv[]) {
 
 // Method moves vehicles in a given direction one unit at a time. Called every time input is given. Vehicles are moved before the animator is drawn for that frame
 //(after might be better for the sake of fulfilling Dr. Szajda's condition of no vehicles should be on the grid at the start). First parameter is the lane that is
-//to be moved. Second parameter is the color of the stoplight in case any 
-void moveVehicles(vector<VehicleBase*>& vehicles) {
-    for (size_t i = 0; i < vehicles.size(); i++) {
-        if (vehicles[vehicles.size()-1-i] != nullptr) { //If current space on grid is not a null pointer (iterates backwards), makes it so if the currently checked tile is empty no operations are done
-            if (vehicles.size()-1-i == 0 && vehicles[vehicles.size()-1-i] != vehicles[vehicles.size()-i]) { //If current space is the first space and space ahead is not the same as current space (later include properties to account for other vehicle types than car)
+//to be moved.
+// void moveVehicles(vector<VehicleBase*>& vehicles) {
+//     for (size_t i = 0; i < vehicles.size(); i++) {
+//         if (vehicles[vehicles.size()-1-i] != nullptr) { //If current space on grid is not a null pointer (iterates backwards), makes it so if the currently checked tile is empty no operations are done
+//             if (vehicles.size()-1-i == 0 && vehicles[vehicles.size()-1-i] != vehicles[vehicles.size()-i]) { //If current space is the first space and space ahead is not the same as current space (later include properties to account for other vehicle types than car)
+//                 vehicles[vehicles.size()-i] = vehicles[vehicles.size()-1-i]; //Make current vehicle segment also occupy the space in front of it
+//                 continue; //Do not delete previous segment location; previous segment location becomes next segment for a newly generated vehicle
+//             }
+//             if (vehicles.size()-1-i == vehicles.size()-1) { //If the current space is the last space
+//                 if (vehicles[vehicles.size()-2-i] != vehicles[vehicles.size()-1]) { //If this is the last segment of a car
+//                     delete vehicles[vehicles.size()-1]; //Deallocate memory allocated to the vehicle
+//                 }
+//                 vehicles[vehicles.size()-i-1] = nullptr; //Delete the segment; it does not get placed in the next segment because there is no next segment, the vehicle segment exits the intersection
+//             } else if (vehicles.size()-1-i == 0) { //If current space is the first space; we know from earlier this is the last segment of the vehicle (ACCOUNT FOR OTHER VEHICLE TYPES LATER!)
+//                 vehicles[vehicles.size()-i] = vehicles[vehicles.size()-1-i]; //Make current vehicle segment also occupy the space in front of it
+//                 vehicles[vehicles.size()-i-1] = nullptr; //Delete previous segment location
+//             } else { //If current space is anywhere in between the first and last spaces
+//                 vehicles[vehicles.size()-i] = vehicles[vehicles.size()-1-i]; //Make current vehicle segment also occupy the space in front of it
+//                 if (vehicles[vehicles.size()-i-1] != vehicles[vehicles.size()-i-2]) { //If this is the last segment in a car (change to account for other sizes later)
+//                     vehicles[vehicles.size()-i-1] = nullptr; //Delete previous segment location
+//                 }
+//             }
+//         }
+//     }
+// }
+
+// Method moves vehicles in a given direction one unit at a time. Called every time input is given. Vehicles are moved before the animator is drawn for that frame
+//(after might be better for the sake of fulfilling Dr. Szajda's condition of no vehicles should be on the grid at the start). First parameter is the lane that is
+//to be moved. Second parameter is the color of the stoplight so vehicles can stop at the stoplight when needed. Third parameter is the input map for use when inputted
+//values are needed.
+void moveVehicles (vector<VehicleBase*>& vehicles, StopLight& light, map<string, string> inputMap) {
+    for (size_t i = 0; i < vehicles.size(); i++) { //Loop through all spaces in lane
+
+        //Check if the current space has a vehicle pointer in it
+        if (vehicles[vehicles.size()-1-i] == nullptr) { //If current space does not have a vehicle in it
+            continue; //Skip past this space and continue looking for vehicles
+        }
+
+        //If any code in the method past here is read, that means there is a vehicle in the current space (vehicles.size()-i-1)
+
+        //Operations for if the current space is the first space
+        if (vehicles.size()-i-1 == 0) { //If the current space is the first space
+            if (vehicles[vehicles.size()-1-i] != vehicles[vehicles.size()-i+1]) { //If segment ahead is not the same as current segment (later include properties to account for other vehicle types than car)
                 vehicles[vehicles.size()-i] = vehicles[vehicles.size()-1-i]; //Make current vehicle segment also occupy the space in front of it
                 continue; //Do not delete previous segment location; previous segment location becomes next segment for a newly generated vehicle
-            }
-            if (vehicles.size()-1-i == vehicles.size()-1) { //If the current space is the last space
-                if (vehicles[vehicles.size()-2-i] != vehicles[vehicles.size()-1]) { //If this is the last segment of a car
-                    delete vehicles[vehicles.size()-1]; //Deallocate memory allocated to the vehicle
-                }
-                vehicles[vehicles.size()-i-1] = nullptr; //Delete the segment; it does not get placed in the next segment because there is no next segment, the vehicle segment exits the intersection
-            } else if (vehicles.size()-1-i == 0) { //If current space is the first space; we know from earlier this is the last segment of the vehicle (ACCOUNT FOR OTHER VEHICLE TYPES LATER!)
+            } else { //If this is the last segment of a car in the first space, we treat it like any other space where it just needs to move forward
                 vehicles[vehicles.size()-i] = vehicles[vehicles.size()-1-i]; //Make current vehicle segment also occupy the space in front of it
                 vehicles[vehicles.size()-i-1] = nullptr; //Delete previous segment location
-            } else { //If current space is anywhere in between the first and last spaces
-                vehicles[vehicles.size()-i] = vehicles[vehicles.size()-1-i]; //Make current vehicle segment also occupy the space in front of it
-                if (vehicles[vehicles.size()-i-1] != vehicles[vehicles.size()-i-2]) { //If this is the last segment in a car (change to account for other sizes later)
-                    vehicles[vehicles.size()-i-1] = nullptr; //Delete previous segment location
-                }
+                continue;
             }
         }
+
+        //Operations for if the current space is the last space
+        if (vehicles.size()-i-1 == vehicles.size()-1) { //If the current space is the last space
+            if (vehicles[vehicles.size()-2-i] != vehicles[vehicles.size()-1]) { //If this is the last segment of a car
+                delete vehicles[vehicles.size()-1]; //Deallocate memory allocated to the vehicle
+            }
+            vehicles[vehicles.size()-i-1] = nullptr; //Delete the segment; it does not get placed in the next segment because there is no next segment, the vehicle segment exits the intersection
+            continue;
+        }
+
+        //Check if the space ahead of the vehicle is filled already
+        if (vehicles[vehicles.size()-i] != nullptr) { //If the space ahead of the current space is not empty
+            continue; //The space ahead already has a vehicle in it and thus the current segment cannot move forward, otherwise they would overlap
+        }
+
+        //Check if the vehicle is in front of the intersection, and if so, check if it can enter the intersection
+        // if (vehicles.size()-i-1 == inputMap["number_of_sections_before_intersection:"]) { //If the current space is right in front of the intersection
+
+        //     //Add stoplight check here later once the class works on my computer
+
+        // }
+
+        //If the current space anywhere that isn't a special case
+        vehicles[vehicles.size()-i] = vehicles[vehicles.size()-1-i]; //Make current vehicle segment also occupy the space in front of it
+        vehicles[vehicles.size()-i-1] = nullptr; //Delete previous segment location
+        
     }
 }
 
@@ -159,32 +214,32 @@ void spawnVehicle(vector<VehicleBase*>& vehicles, Direction direction, map<strin
     }
 
     //Initialize variables to pass into VehicleBase constructor; no need for direction since that was determined from where the method was called
-    VehicleType type; //Type of vehicle
+    VehicleType type = VehicleType::car; //Type of vehicle
     bool toRight; //Whether the vehicle will turn right or not
 
     //Calculate the type of the vehicle and whether or not it will turn right
-    if (typeRandNum < stod(inputMap["proportion_of_cars:"])) { //If the random number is within the odds of the probability it will be a car
-        type = VehicleType::car; //Make the vehicle a car
-        if (turnRandNum < stod(inputMap["proportion_of_right_turn_cars:"])) { //If the random number is within the odds of the car turning right
-            toRight = true; //The car will turn right
-        } else {
-            toRight = false; //The car will not turn right
-        }
-    } else if (typeRandNum < stod(inputMap["proportion_of_SUVs:"])) { //If the random number is within the odds of the probability it will be an SUV
-        type = VehicleType::suv; //Make the vehicle an SUV
-        if (turnRandNum < stod(inputMap["proportion_of_right_turn_SUVs:"])) { //If the random number is within the odds of the SUV turning right
-            toRight = true; //The SUV will turn right
-        } else {
-            toRight = false; //The SUV will not turn right
-        }
-    } else { //If the random number is not within the odds of either of the previous two options, it must be a truck by process of elimination
-        type = VehicleType::truck; //Make the vehicle a truck
-        if (turnRandNum < stod(inputMap["proportion_of_right_turn_trucks:"])) { //If the random number is within the odds of the truck turning right
-            toRight = true; //The truck will turn right
-        } else {
-            toRight = false; //The truck will not turn right
-        }
-    }
+    // if (typeRandNum < stod(inputMap["proportion_of_cars:"])) { //If the random number is within the odds of the probability it will be a car
+    //     type = VehicleType::car; //Make the vehicle a car
+    //     if (turnRandNum < stod(inputMap["proportion_of_right_turn_cars:"])) { //If the random number is within the odds of the car turning right
+    //         toRight = true; //The car will turn right
+    //     } else {
+    //         toRight = false; //The car will not turn right
+    //     }
+    // } else if (typeRandNum < stod(inputMap["proportion_of_SUVs:"])) { //If the random number is within the odds of the probability it will be an SUV
+    //     type = VehicleType::suv; //Make the vehicle an SUV
+    //     if (turnRandNum < stod(inputMap["proportion_of_right_turn_SUVs:"])) { //If the random number is within the odds of the SUV turning right
+    //         toRight = true; //The SUV will turn right
+    //     } else {
+    //         toRight = false; //The SUV will not turn right
+    //     }
+    // } else { //If the random number is not within the odds of either of the previous two options, it must be a truck by process of elimination
+    //     type = VehicleType::truck; //Make the vehicle a truck
+    //     if (turnRandNum < stod(inputMap["proportion_of_right_turn_trucks:"])) { //If the random number is within the odds of the truck turning right
+    //         toRight = true; //The truck will turn right
+    //     } else {
+    //         toRight = false; //The truck will not turn right
+    //     }
+    // }
 
     vehicles[0] = new VehicleBase(type, direction, toRight); //Place newly generated vehicle in the first space of the lane
 }
