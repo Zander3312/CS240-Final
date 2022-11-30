@@ -1,5 +1,5 @@
 EXECS = simulation
-OBJS = Animator.o VehicleBase.o simulation.o
+OBJS = Animator.o VehicleBase.o simulation.o StopLight.o
 
 #### use next two lines for Mac
 #CC = clang++

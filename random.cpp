@@ -7,7 +7,7 @@ int main()
     std::uniform_real_distribution<double> rand_double(0,1);
 
     //randomNumberGenerator.seed(39);
-    randomNumberGenerator.seed(391);
+    randomNumberGenerator.seed(39);
 
     for (int i = 0; i < 10; i++)
     {

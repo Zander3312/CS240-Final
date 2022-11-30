@@ -10,7 +10,9 @@
 #include <fstream>
 #include <vector>
 #include <random>
+#include <map>
 #include "Animator.h"
+#include "StopLight.h"
 #include "VehicleBase.h"
 using namespace std;
 
@@ -18,7 +20,7 @@ using namespace std;
 //Declare methods
 void moveVehicles(vector<VehicleBase*>& vehicles);
 void turnRight(vector<VehicleBase*>& directionFrom, vector<VehicleBase*>& directionTo, int sectionsBeforeIntersection);
-void spawnVehicle(vector<VehicleBase*>& vehicles, Direction direction);
+void spawnVehicle(vector<VehicleBase*>& vehicles, Direction direction, map<string, string> inputMap, double typeRandNum, double turnRandNum);
 
 int main(int argc, char* argv[]) {
     //Check if number of arguments is correct; if not, print proper usage then exit program
@@ -35,45 +37,13 @@ int main(int argc, char* argv[]) {
         exit(0);
     }
 
-    //Assign values from input file to corresponding variable
+    //Create map that will hold input data
     string currentWord; //Declare string that will hold the name of the value from the input file, used to check if input file is correct
     string currentValue; //Declare string that will hold the value associated with that string
-    inFile >> currentWord >> currentValue; //Get values from line of input file
-    int maxSimulatedTime = stoi(currentValue); //Assign the value to a variable corresponding with the given value for later use
-    inFile >> currentWord >> currentValue; //Repeat this process for all values
-    int sectionsBeforeIntersection = stoi(currentValue);
-    inFile >> currentWord >> currentValue;
-    int greenNorthSouth = stoi(currentValue);
-    inFile >> currentWord >> currentValue;
-    int yellowNorthSouth = stoi(currentValue);
-    inFile >> currentWord >> currentValue;
-    int greenEastWest = stoi(currentValue);
-    inFile >> currentWord >> currentValue;
-    int yellowEastWest = stoi(currentValue);
-    inFile >> currentWord >> currentValue;
-    double probNewVehicleNorth = stod(currentValue);
-    inFile >> currentWord >> currentValue;
-    double probNewVehicleSouth = stod(currentValue);
-    inFile >> currentWord >> currentValue;
-    double probNewVehicleEast = stod(currentValue);
-    inFile >> currentWord >> currentValue;
-    double probNewVehicleWest = stod(currentValue);
-    inFile >> currentWord >> currentValue;
-    double proportionCars = stod(currentValue);
-    inFile >> currentWord >> currentValue;
-    double proportionSUVs = stod(currentValue);
-    inFile >> currentWord >> currentValue;
-    double proportionRightCars = stod(currentValue);
-    inFile >> currentWord >> currentValue;
-    double proportionLeftCars = stod(currentValue);
-    inFile >> currentWord >> currentValue;
-    double proportionRightSUVs = stod(currentValue);
-    inFile >> currentWord >> currentValue;
-    double proportionLeftSUVs = stod(currentValue);
-    inFile >> currentWord >> currentValue;
-    double proportionRightTrucks = stod(currentValue);
-    inFile >> currentWord >> currentValue;
-    double proportionLeftTrucks = stod(currentValue);
+    map<string, string> inputMap; //Initialize map
+    while (inFile >> currentWord >> currentValue) { //Loop until all values from input file are exhausted
+        inputMap.insert(make_pair(currentWord, currentValue)); //Insert data into map
+    }
 
     inFile.close(); //Done with input file
 
@@ -85,13 +55,13 @@ int main(int argc, char* argv[]) {
 
     Animator::MAX_VEHICLE_COUNT = 999;  // vehicles will be displayed with three digits
 
-    Animator anim(sectionsBeforeIntersection);
+    Animator anim(stoi(inputMap["number_of_sections_before_intersection:"]));
 
     // construct vectors of VehicleBase* of appropriate size, init to nullptr
-    vector<VehicleBase*> westbound(sectionsBeforeIntersection * 2 + 2, nullptr);
-    vector<VehicleBase*> eastbound(sectionsBeforeIntersection * 2 + 2, nullptr);
-    vector<VehicleBase*> southbound(sectionsBeforeIntersection * 2 + 2, nullptr);
-    vector<VehicleBase*> northbound(sectionsBeforeIntersection * 2 + 2, nullptr);
+    vector<VehicleBase*> westbound(stoi(inputMap["number_of_sections_before_intersection:"]) * 2 + 2, nullptr);
+    vector<VehicleBase*> eastbound(stoi(inputMap["number_of_sections_before_intersection:"]) * 2 + 2, nullptr);
+    vector<VehicleBase*> southbound(stoi(inputMap["number_of_sections_before_intersection:"]) * 2 + 2, nullptr);
+    vector<VehicleBase*> northbound(stoi(inputMap["number_of_sections_before_intersection:"]) * 2 + 2, nullptr);
 
     char dummy; //Used to wait for input
 
@@ -100,7 +70,7 @@ int main(int argc, char* argv[]) {
     anim.setLightEastWest(LightColor::green);
 
     //Main loop for moving and drawing the vehicles
-    for (int clock = 0; clock < maxSimulatedTime; clock++) {
+    for (int clock = 0; clock < stoi(inputMap["maximum_simulated_time:"]); clock++) {
 
         //Move vehicles in all directions
         moveVehicles(northbound);
@@ -109,23 +79,23 @@ int main(int argc, char* argv[]) {
         moveVehicles(eastbound);
 
         //Check for and execute right turns
-        //if (eastbound[sectionsBeforeIntersection+1] != nullptr) { //If there is a car segment in the first part of an intersection (later check if car is turning right)
-        //    turnRight(eastbound, southbound, sectionsBeforeIntersection); //Change car from first lane to new lane after having turned right
-        //}
+        if (eastbound[stoi(inputMap["number_of_sections_before_intersection:"])+1] != nullptr) { //If there is a car segment in the first part of an intersection (later check if car is turning right)
+           turnRight(eastbound, southbound, stoi(inputMap["number_of_sections_before_intersection:"])); //Change car from first lane to new lane after having turned right
+        }
 
         //Run RNG to see if a vehicle will be spawned; if so, spawn the vehicle
         randNum = rand_double(randomNumberGenerator);
-        if (randNum < probNewVehicleNorth)
-            spawnVehicle(northbound, Direction::north);
+        if (randNum < stod(inputMap["prob_new_vehicle_northbound:"]))
+            spawnVehicle(northbound, Direction::north, inputMap, rand_double(randomNumberGenerator), rand_double(randomNumberGenerator));
         randNum = rand_double(randomNumberGenerator);
-        if (randNum < probNewVehicleWest)
-            spawnVehicle(westbound, Direction::west);
+        if (randNum < stod(inputMap["prob_new_vehicle_westbound:"]))
+            spawnVehicle(westbound, Direction::west, inputMap, rand_double(randomNumberGenerator), rand_double(randomNumberGenerator));
         randNum = rand_double(randomNumberGenerator);
-        if (randNum < probNewVehicleSouth)
-            spawnVehicle(southbound, Direction::south);
+        if (randNum < stod(inputMap["prob_new_vehicle_southbound:"]))
+            spawnVehicle(southbound, Direction::south, inputMap, rand_double(randomNumberGenerator), rand_double(randomNumberGenerator));
         randNum = rand_double(randomNumberGenerator);
-        if (randNum < probNewVehicleEast)
-            spawnVehicle(eastbound, Direction::east);
+        if (randNum < stod(inputMap["prob_new_vehicle_eastbound:"]))
+            spawnVehicle(eastbound, Direction::east, inputMap, rand_double(randomNumberGenerator), rand_double(randomNumberGenerator));
 
         //Set vehicles moving in all directions
         anim.setVehiclesNorthbound(northbound);
@@ -142,8 +112,9 @@ int main(int argc, char* argv[]) {
     }
 }
 
-// Method moves vehicles in a given direction one unit at a time. Called every time input is given. Vehicles are moved after the animator is drawn for that frame
-//(probably will change to before animator is drawn later but this is better for testing at the moment).
+// Method moves vehicles in a given direction one unit at a time. Called every time input is given. Vehicles are moved before the animator is drawn for that frame
+//(after might be better for the sake of fulfilling Dr. Szajda's condition of no vehicles should be on the grid at the start). First parameter is the lane that is
+//to be moved. Second parameter is the color of the stoplight in case any 
 void moveVehicles(vector<VehicleBase*>& vehicles) {
     for (size_t i = 0; i < vehicles.size(); i++) {
         if (vehicles[vehicles.size()-1-i] != nullptr) { //If current space on grid is not a null pointer (iterates backwards), makes it so if the currently checked tile is empty no operations are done
@@ -153,7 +124,7 @@ void moveVehicles(vector<VehicleBase*>& vehicles) {
             }
             if (vehicles.size()-1-i == vehicles.size()-1) { //If the current space is the last space
                 if (vehicles[vehicles.size()-2-i] != vehicles[vehicles.size()-1]) { //If this is the last segment of a car
-                    delete vehicles[vehicles.size()-1]; //Deallocate memory allocated to the vehicle (Problem here, fix later)
+                    delete vehicles[vehicles.size()-1]; //Deallocate memory allocated to the vehicle
                 }
                 vehicles[vehicles.size()-i-1] = nullptr; //Delete the segment; it does not get placed in the next segment because there is no next segment, the vehicle segment exits the intersection
             } else if (vehicles.size()-1-i == 0) { //If current space is the first space; we know from earlier this is the last segment of the vehicle (ACCOUNT FOR OTHER VEHICLE TYPES LATER!)
@@ -180,14 +151,40 @@ void turnRight(vector<VehicleBase*>& directionFrom, vector<VehicleBase*>& direct
 
 //Method spawns a vehicle in the given space. Called after RNG determines that a vehicle going a given direction should be spawned in the main for loop. First parameter
 //contains the vector corresponding to the direction the spawning vehicle will travel and the vector the spawning vehicle will be placed at the start of.
-//Second parameter determines which direction the spawned vehicle will be traveling in.
-void spawnVehicle(vector<VehicleBase*>& vehicles, Direction direction) {
+//Second parameter determines which direction the spawned vehicle will be traveling in. Third parameter is for using the values from the input file in this scope.
+//Fourth and fifth parameters are random numbers generated prior that decide the type of the vehicle and whether it will turn right or not respectively.
+void spawnVehicle(vector<VehicleBase*>& vehicles, Direction direction, map<string, string> inputMap, double typeRandNum, double turnRandNum) {
     if (vehicles[0] != nullptr) { //If the first space is already occupied
         return; //Don't do anything; you can't spawn in a vehicle if a vehicle is already occupying the space
     }
 
-    //Place things that will determine the qualities of the vehicle here (what type of vehicle, will it turn right, etc.)
+    //Initialize variables to pass into VehicleBase constructor; no need for direction since that was determined from where the method was called
+    VehicleType type; //Type of vehicle
+    bool toRight; //Whether the vehicle will turn right or not
 
-    //VehicleBase* newVehicle = new VehicleBase(VehicleType::car, direction); //Problem here, fix later
-    vehicles[0] = new VehicleBase(VehicleType::car, direction); //Place newly generated vehicle in the first space of the lane
+    //Calculate the type of the vehicle and whether or not it will turn right
+    if (typeRandNum < stod(inputMap["proportion_of_cars:"])) { //If the random number is within the odds of the probability it will be a car
+        type = VehicleType::car; //Make the vehicle a car
+        if (turnRandNum < stod(inputMap["proportion_of_right_turn_cars:"])) { //If the random number is within the odds of the car turning right
+            toRight = true; //The car will turn right
+        } else {
+            toRight = false; //The car will not turn right
+        }
+    } else if (typeRandNum < stod(inputMap["proportion_of_SUVs:"])) { //If the random number is within the odds of the probability it will be an SUV
+        type = VehicleType::suv; //Make the vehicle an SUV
+        if (turnRandNum < stod(inputMap["proportion_of_right_turn_SUVs:"])) { //If the random number is within the odds of the SUV turning right
+            toRight = true; //The SUV will turn right
+        } else {
+            toRight = false; //The SUV will not turn right
+        }
+    } else { //If the random number is not within the odds of either of the previous two options, it must be a truck by process of elimination
+        type = VehicleType::truck; //Make the vehicle a truck
+        if (turnRandNum < stod(inputMap["proportion_of_right_turn_trucks:"])) { //If the random number is within the odds of the truck turning right
+            toRight = true; //The truck will turn right
+        } else {
+            toRight = false; //The truck will not turn right
+        }
+    }
+
+    vehicles[0] = new VehicleBase(type, direction, toRight); //Place newly generated vehicle in the first space of the lane
 }
