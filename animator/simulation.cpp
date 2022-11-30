@@ -80,9 +80,18 @@ int main(int argc, char* argv[]) {
         moveVehicles(eastbound, testLight, inputMap);
 
         //Check for and execute right turns
-        // if (eastbound[stoi(inputMap["number_of_sections_before_intersection:"])+1] != nullptr) { //If there is a car segment in the first part of an intersection (later check if car is turning right)
-        //    turnRight(eastbound, southbound, stoi(inputMap["number_of_sections_before_intersection:"])); //Change car from first lane to new lane after having turned right
-        // }
+        if (northbound[stoi(inputMap["number_of_sections_before_intersection:"])+1] != nullptr && northbound[stoi(inputMap["number_of_sections_before_intersection:"])+1]->VehicleBase::willTurnRight()) { //If there is a car segment in the first part of an intersection (later check if car is turning right)
+           turnRight(northbound, eastbound, stoi(inputMap["number_of_sections_before_intersection:"])); //Change car from first lane to new lane after having turned right
+        }
+        if (westbound[stoi(inputMap["number_of_sections_before_intersection:"])+1] != nullptr && westbound[stoi(inputMap["number_of_sections_before_intersection:"])+1]->VehicleBase::willTurnRight()) { //If there is a car segment in the first part of an intersection (later check if car is turning right)
+           turnRight(westbound, northbound, stoi(inputMap["number_of_sections_before_intersection:"])); //Change car from first lane to new lane after having turned right
+        }
+        if (southbound[stoi(inputMap["number_of_sections_before_intersection:"])+1] != nullptr && southbound[stoi(inputMap["number_of_sections_before_intersection:"])+1]->VehicleBase::willTurnRight()) { //If there is a car segment in the first part of an intersection (later check if car is turning right)
+           turnRight(southbound, westbound, stoi(inputMap["number_of_sections_before_intersection:"])); //Change car from first lane to new lane after having turned right
+        }
+        if (eastbound[stoi(inputMap["number_of_sections_before_intersection:"])+1] != nullptr && eastbound[stoi(inputMap["number_of_sections_before_intersection:"])+1]->VehicleBase::willTurnRight()) { //If there is a car segment in the first part of an intersection (later check if car is turning right)
+           turnRight(eastbound, southbound, stoi(inputMap["number_of_sections_before_intersection:"])); //Change car from first lane to new lane after having turned right
+        }
 
         //Run RNG to see if a vehicle will be spawned; if so, spawn the vehicle
         randNum = rand_double(randomNumberGenerator);
@@ -157,7 +166,7 @@ void moveVehicles (vector<VehicleBase*>& vehicles, StopLight& light, map<string,
 
         //Operations for if the current space is the first space
         if (vehicles.size()-i-1 == 0) { //If the current space is the first space
-            if (vehicles[vehicles.size()-1-i] != vehicles[vehicles.size()-i+1]) { //If segment ahead is not the same as current segment (later include properties to account for other vehicle types than car)
+            if (vehicles[vehicles.size()-1-i] != vehicles[vehicles.size()-i+1+(vehicles[vehicles.size()-1-i]->getLength()-2)]) { //If segment ahead is not the same as current segment
                 vehicles[vehicles.size()-i] = vehicles[vehicles.size()-1-i]; //Make current vehicle segment also occupy the space in front of it
                 continue; //Do not delete previous segment location; previous segment location becomes next segment for a newly generated vehicle
             } else { //If this is the last segment of a car in the first space, we treat it like any other space where it just needs to move forward
@@ -218,28 +227,28 @@ void spawnVehicle(vector<VehicleBase*>& vehicles, Direction direction, map<strin
     bool toRight; //Whether the vehicle will turn right or not
 
     //Calculate the type of the vehicle and whether or not it will turn right
-    // if (typeRandNum < stod(inputMap["proportion_of_cars:"])) { //If the random number is within the odds of the probability it will be a car
-    //     type = VehicleType::car; //Make the vehicle a car
-    //     if (turnRandNum < stod(inputMap["proportion_of_right_turn_cars:"])) { //If the random number is within the odds of the car turning right
-    //         toRight = true; //The car will turn right
-    //     } else {
-    //         toRight = false; //The car will not turn right
-    //     }
-    // } else if (typeRandNum < stod(inputMap["proportion_of_SUVs:"])) { //If the random number is within the odds of the probability it will be an SUV
-    //     type = VehicleType::suv; //Make the vehicle an SUV
-    //     if (turnRandNum < stod(inputMap["proportion_of_right_turn_SUVs:"])) { //If the random number is within the odds of the SUV turning right
-    //         toRight = true; //The SUV will turn right
-    //     } else {
-    //         toRight = false; //The SUV will not turn right
-    //     }
-    // } else { //If the random number is not within the odds of either of the previous two options, it must be a truck by process of elimination
-    //     type = VehicleType::truck; //Make the vehicle a truck
-    //     if (turnRandNum < stod(inputMap["proportion_of_right_turn_trucks:"])) { //If the random number is within the odds of the truck turning right
-    //         toRight = true; //The truck will turn right
-    //     } else {
-    //         toRight = false; //The truck will not turn right
-    //     }
-    // }
+    if (typeRandNum < stod(inputMap["proportion_of_cars:"])) { //If the random number is within the odds of the probability it will be a car
+        type = VehicleType::car; //Make the vehicle a car
+        if (turnRandNum < stod(inputMap["proportion_right_turn_cars:"])) { //If the random number is within the odds of the car turning right
+            toRight = true; //The car will turn right
+        } else {
+            toRight = false; //The car will not turn right
+        }
+    } else if (typeRandNum < stod(inputMap["proportion_of_SUVs:"]) + stod(inputMap["proportion_right_turn_cars:"])) { //If the random number is within the odds of the probability it will be an SUV
+        type = VehicleType::suv; //Make the vehicle an SUV
+        if (turnRandNum < stod(inputMap["proportion_right_turn_SUVs:"])) { //If the random number is within the odds of the SUV turning right
+            toRight = true; //The SUV will turn right
+        } else {
+            toRight = false; //The SUV will not turn right
+        }
+    } else { //If the random number is not within the odds of either of the previous two options, it must be a truck by process of elimination
+        type = VehicleType::truck; //Make the vehicle a truck
+        if (turnRandNum < stod(inputMap["proportion_right_turn_trucks:"])) { //If the random number is within the odds of the truck turning right
+            toRight = true; //The truck will turn right
+        } else {
+            toRight = false; //The truck will not turn right
+        }
+    }
 
     vehicles[0] = new VehicleBase(type, direction, toRight); //Place newly generated vehicle in the first space of the lane
 }

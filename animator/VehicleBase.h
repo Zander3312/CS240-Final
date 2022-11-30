@@ -36,6 +36,7 @@ class VehicleBase
       inline VehicleType getVehicleType() const { return this->vehicleType; }
       inline Direction   getVehicleOriginalDirection() const { return this->vehicleDirection; }
       inline bool willTurnRight() {return this->turnRight; }
+      inline int getLength() {return this->length;}
 
       // void moveForward(vector<VehicleBase*> &road, StopLight& light);
       // void moveRight(vector<VehicleBase*> &initialRoad, vector<VehicleBase*> &newRoad);
