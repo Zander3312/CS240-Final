@@ -196,12 +196,6 @@ void moveVehicles (vector<VehicleBase*>& vehicles, StopLight& light, map<string,
 
         }
 
-        // int pointBeforeIntersection = vehicles.size() / 2 - 2;
-        // if (vehicles.size() - i - 1 == pointBeforeIntersection){
-            
-        // }
-
-
         //If the current space anywhere that isn't a special case
         vehicles[vehicles.size()-i] = vehicles[vehicles.size()-1-i]; //Make current vehicle segment also occupy the space in front of it
         vehicles[vehicles.size()-i-1] = nullptr; //Delete previous segment location
