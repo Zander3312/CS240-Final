@@ -65,19 +65,33 @@ int main(int argc, char* argv[]) {
     char dummy; //Used to wait for input
 
     // Initialize stoplight colors - delete when lights are actually implemented
-    anim.setLightNorthSouth(LightColor::green);
-    anim.setLightEastWest(LightColor::green);
+    //anim.setLightNorthSouth(LightColor::green);
+    //anim.setLightEastWest(LightColor::red);
 
-    StopLight testLight; //Create StopLight object for testing
+    //StopLight testLight; //Create StopLight object for testing
+
+    int greenNS = stoi(inputMap["green_north_south:"]);
+    int yellowNS = stoi(inputMap["yellow_north_south:"]);
+    int greenEW = stoi(inputMap["green_east_west:"]);
+    int yellowEW = stoi(inputMap["yellow_east_west:"]);
+    int redNS = greenEW + yellowEW;
+    int redEW = greenNS + yellowNS;
+
+    StopLight lightNS = StopLight(greenNS, yellowNS, redNS, LightColor::green);
+    StopLight lightEW = StopLight(greenEW, yellowEW, redEW, LightColor::red);
+
+    anim.setLightNorthSouth(LightColor::green);
+    anim.setLightEastWest(LightColor::red);
+
 
     //Main loop for moving and drawing the vehicles
     for (int clock = 0; clock < stoi(inputMap["maximum_simulated_time:"]); clock++) {
 
         //Move vehicles in all directions
-        moveVehicles(northbound, testLight, inputMap);
-        moveVehicles(westbound, testLight, inputMap);
-        moveVehicles(southbound, testLight, inputMap);
-        moveVehicles(eastbound, testLight, inputMap);
+        moveVehicles(northbound, lightNS, inputMap);
+        moveVehicles(westbound, lightEW, inputMap);
+        moveVehicles(southbound, lightNS, inputMap);
+        moveVehicles(eastbound, lightEW, inputMap);
 
         //Check for and execute right turns
         if (northbound[stoi(inputMap["number_of_sections_before_intersection:"])+1] != nullptr && northbound[stoi(inputMap["number_of_sections_before_intersection:"])+1]->VehicleBase::willTurnRight()) { //If there is a car segment in the first part of an intersection (later check if car is turning right)
@@ -107,6 +121,13 @@ int main(int argc, char* argv[]) {
         if (randNum < stod(inputMap["prob_new_vehicle_eastbound:"]))
             spawnVehicle(eastbound, Direction::east, inputMap, rand_double(randomNumberGenerator), rand_double(randomNumberGenerator));
 
+
+        lightEW.decrement();
+        lightNS.decrement();
+
+        anim.setLightNorthSouth(lightNS.getColor());
+        anim.setLightEastWest(lightEW.getColor());
+
         //Set vehicles moving in all directions
         anim.setVehiclesNorthbound(northbound);
         anim.setVehiclesWestbound(westbound);
@@ -118,6 +139,9 @@ int main(int argc, char* argv[]) {
 
         //Wait for input to progress in the loop
         std::cin.get(dummy);
+
+
+
         
     }
 }
@@ -191,15 +215,34 @@ void moveVehicles (vector<VehicleBase*>& vehicles, StopLight& light, map<string,
         }
 
         //Check if the vehicle is in front of the intersection, and if so, check if it can enter the intersection
-        // if (vehicles.size()-i-1 == inputMap["number_of_sections_before_intersection:"]) { //If the current space is right in front of the intersection
+        if (vehicles.size()-i-1 == stoi(inputMap["number_of_sections_before_intersection:"]) - 1) { //If the current space is right in front of the intersection
 
         //     //Add stoplight check here later once the class works on my computer
 
-        // }
+            LightColor currentColor = light.getColor();
+            if (currentColor == LightColor::red){
+                continue;
+            }
+            else if (currentColor == LightColor::yellow){
+                if (vehicles[(vehicles.size() - i - 1) - (vehicles[vehicles.size() - i - 1]->getLength() - 1)] == vehicles[vehicles.size() - i  - 1]){  //if this is the first segment 
+                    if (light.getTimeLeft() <= vehicles[vehicles.size() - i - 1]->getLength()){
+                        continue;
+                    }
+                }
+            }
+
+        }
+
+        int pointBeforeIntersection = vehicles.size() / 2 - 2;
+        if (vehicles.size() - i - 1 == pointBeforeIntersection){
+            
+        }
+
 
         //If the current space anywhere that isn't a special case
         vehicles[vehicles.size()-i] = vehicles[vehicles.size()-1-i]; //Make current vehicle segment also occupy the space in front of it
         vehicles[vehicles.size()-i-1] = nullptr; //Delete previous segment location
+
         
     }
 }
