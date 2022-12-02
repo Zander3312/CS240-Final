@@ -3,7 +3,7 @@
 // Main method of traffic simulator. Handles movement of cars, right turns, stoplight logic, making sure cars do not collide, reading input file, animating, and RNG.
 // Run this program using "./simulation <input file> <initial RNG seed>"
 // Handles cars as separate segments and generates and moves each segment independent of the others. In cases where the rest of the car's position has to be known,
-// array tracking based on the current segment's position are used. 
+// array tracking based on the current segment's position are used.
 
 #include <iostream>
 #include <fstream>
