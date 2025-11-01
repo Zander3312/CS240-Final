@@ -1,4 +1,4 @@
-// Names: Zander Hesch and Alan Kassymkanov
+// Names: Zander3312 and Alan Kassymkanov
 // Date: 11-17-22
 // Main method of traffic simulator. Handles movement of cars, right turns, stoplight logic, making sure cars do not collide, reading input file, animating, and RNG.
 // Run this program using "./simulation <input file> <initial RNG seed>"
